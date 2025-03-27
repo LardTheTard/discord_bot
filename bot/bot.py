@@ -6,6 +6,8 @@ from discord.ext import commands
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
+intents.presences = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -162,9 +164,15 @@ async def start(ctx):
             card = Card(i, j)
             deck.append(card)
     random.shuffle(deck)
-    deck_str = ", ".join(str(card) for card in deck)
-    await ctx.send(deck_str)
-
+    # deck_str = ", ".join(str(card) for card in deck)
+    for id in cur_sess:
+        id = int(id.strip())
+        try:
+            member = ctx.guild.get_member(id)
+            await member.send(f"Hand:\n{deck.pop(0)}\n{deck.pop(0)}")
+        except discord.Forbidden:
+            await ctx.send(f"❌ Could not DM {member.name}. They may have DMs disabled.")
+    # await ctx.send(deck_str)
 
 @bot.event
 async def on_message(message):
@@ -210,4 +218,4 @@ async def on_command_error(ctx, error):
         await ctx.send("❌ An error occurred!")
 
 # Run the Bot (Replace "YOUR_TOKEN_HERE" with your bot token)
-bot.run()
+bot.run('')
