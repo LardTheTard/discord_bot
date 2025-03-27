@@ -1,5 +1,6 @@
 import discord
 import json
+import random
 from discord.ext import commands
 
 intents = discord.Intents.default()
@@ -12,13 +13,13 @@ async def on_ready():
     print(f"✅ Logged in as {bot.user}")
 
 try:
-    with open('cur_sess.json', 'r') as f:
+    with open('json/cur_sess.json', 'r') as f:
         cur_sess = json.load(f)
 except FileNotFoundError:
     cur_sess = {}
 
 try:
-    with open('user_data.json', 'r') as f:
+    with open('json/user_data.json', 'r') as f:
         user_data = json.load(f)
 except FileNotFoundError:
     user_data = {}
@@ -140,6 +141,25 @@ async def setbuyin(ctx, num: int):
     else:
         await ctx.send("A session is current ongoing, please end the session before changing buy-in values.")
 
+class Card:
+    def __init__(self, value, suit):
+        self.value = value
+        self.suit = suit
+
+    def __str__(self):
+        return f"{self.value} of {self.suit}"
+
+@bot.command()
+async def start(ctx):
+    suits = ["Hearts♥️", "Spades♠️", "Diamonds♦️", "Clubs♣️"]
+    deck = []
+    for j in suits:
+        for i in range(1, 14):
+            card = Card(i, j)
+            deck.append(card)
+    random.shuffle(deck)
+    deck_str = ", ".join(str(card) for card in deck)
+    await ctx.send(deck_str)
 
 
 @bot.event
