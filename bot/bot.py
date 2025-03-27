@@ -1,6 +1,7 @@
 import discord
 import json
 import random
+import os
 from discord.ext import commands
 
 intents = discord.Intents.default()
@@ -12,14 +13,17 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
 
+cur_sess_file_path = os.path.join(os.path.dirname(__file__), '..', 'json', 'cur_sess.json')
+user_data_file_path = os.path.join(os.path.dirname(__file__), '..', 'json', 'user_data.json')
+
 try:
-    with open('json/cur_sess.json', 'r') as f:
+    with open(cur_sess_file_path, 'r') as f:
         cur_sess = json.load(f)
 except FileNotFoundError:
     cur_sess = {}
 
 try:
-    with open('json/user_data.json', 'r') as f:
+    with open(user_data_file_path, 'r') as f:
         user_data = json.load(f)
 except FileNotFoundError:
     user_data = {}
@@ -30,11 +34,11 @@ async def join(ctx):
     if user_id in cur_sess:
         await ctx.send(f"You are already in the session, {ctx.author.name}.")
     else:
-        # References buy_in_value, which if not set due to not being in user_data.json, will return an error. Therefore, must pull data from github first or set it manually using !setbuyin
+        # References buy_in_value, which if not set due to not being in json/user_data.json, will return an error. Therefore, must pull data from github first or set it manually using !setbuyin
         cur_sess[user_id] = {'name': ctx.author.name, 'chips': user_data['buy_in_value']['chips'], 'buyins': -1}
-        with open('user_data.json', 'w') as f:
+        with open(user_data_file_path, 'w') as f:
             json.dump(user_data, f) 
-        with open('cur_sess.json', 'w') as f:
+        with open(cur_sess_file_path, 'w') as f:
             json.dump(cur_sess, f) 
         await ctx.send(f"{ctx.author.name} is now in the session.")
 
@@ -46,9 +50,9 @@ async def leave(ctx):
     else:
         user_data[user_id]['chips'] += cur_sess[user_id]['chips'] + cur_sess[user_id]['buyins'] * user_data['buy_in_value']['chips']
         del cur_sess[user_id]
-        with open('user_data.json', 'w') as f:
+        with open(user_data_file_path, 'w') as f:
             json.dump(user_data, f) 
-        with open('cur_sess.json', 'w') as f:
+        with open(cur_sess_file_path, 'w') as f:
             json.dump(cur_sess, f) 
         await ctx.send(f"{ctx.author.name} left the session.")
 
@@ -79,7 +83,7 @@ async def setchips(ctx, member: discord.Member, num: int):
     if user_id not in user_data:
         user_data[user_id] = {'name': member.name, 'chips': 0}
     user_data[user_id]['chips'] = num
-    with open('user_data.json', 'w') as f:
+    with open(user_data_file_path, 'w') as f:
         json.dump(user_data, f) 
     await ctx.send(f"{member.name}'s now has {num} chips.")
 
@@ -111,7 +115,7 @@ async def changechips(ctx, member: discord.Member, num: int):
     if user_id not in user_data:
         user_data[user_id] = {'name': member.name, 'chips': 0}
     user_data[user_id]['chips'] += num
-    with open('user_data.json', 'w') as f:
+    with open(user_data_file_path, 'w') as f:
         json.dump(user_data, f)
     await ctx.send(f"{member.name}'s chips have been updated to {user_data[user_id]['chips']}.")
 
@@ -119,7 +123,7 @@ async def changechips(ctx, member: discord.Member, num: int):
 async def reset(ctx, member: discord.Member):
     user_id = str(member.id)
     user_data[user_id] = {'name': member.name, 'chips': 0}
-    with open('user_data.json', 'w') as f:
+    with open(user_data_file_path, 'w') as f:
         json.dump(user_data, f)
     await ctx.send(f"{member.name}'s stats have been reset.")
 
@@ -127,7 +131,7 @@ async def reset(ctx, member: discord.Member):
 async def resetseason(ctx):
     for i in user_data:
         user_data[i] = {'name': user_data[i]['name'], 'chips': 0}
-    with open('user_data.json', 'w') as f:
+    with open(user_data_file_path, 'w') as f:
         json.dump(user_data, f)
     await ctx.send("All stats have been reset.")
 
@@ -135,7 +139,7 @@ async def resetseason(ctx):
 async def setbuyin(ctx, num: int):
     if len(cur_sess) == 0:
         user_data['buy_in_value'] = {'name': None, 'chips': num}
-        with open('user_data.json', 'w') as f:
+        with open(user_data_file_path, 'w') as f:
             json.dump(user_data, f)
             await ctx.send(f"Buy-in value changed to {num}.")
     else:
