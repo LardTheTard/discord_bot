@@ -10,6 +10,7 @@ intents.members = True
 intents.presences = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+turn_order_index = 0
 
 @bot.event
 async def on_ready():
@@ -148,20 +149,23 @@ async def setbuyin(ctx, num: int):
         await ctx.send("A session is current ongoing, please end the session before changing buy-in values.")
 
 class Card:
-    def __init__(self, value, suit):
+    def __init__(self, value, alias, suit):
         self.value = value
+        self.alias = alias
         self.suit = suit
 
     def __str__(self):
-        return f"{self.value} of {self.suit}"
+        return f"{self.alias} of {self.suit}"
 
 @bot.command()
 async def start(ctx):
     suits = ["Hearts♥️", "Spades♠️", "Diamonds♦️", "Clubs♣️"]
+    aliases = ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"]
     deck = []
+    player_order = []
     for j in suits:
         for i in range(1, 14):
-            card = Card(i, j)
+            card = Card(i, aliases[i - 1], j)
             deck.append(card)
     random.shuffle(deck)
     # deck_str = ", ".join(str(card) for card in deck)
@@ -169,10 +173,16 @@ async def start(ctx):
         id = int(id.strip())
         try:
             member = ctx.guild.get_member(id)
-            await member.send(f"Hand:\n{deck.pop(0)}\n{deck.pop(0)}")
+            await member.send(f"**Hand:**\n{deck.pop(0)}\n{deck.pop(0)}")
         except discord.Forbidden:
             await ctx.send(f"❌ Could not DM {member.name}. They may have DMs disabled.")
     # await ctx.send(deck_str)
+    for id in cur_sess:
+        id = int(id.strip())
+        member = ctx.guild.get_member(id)
+        player_order.append(member)
+    await ctx.send("Preflop betting round, hands have been sent to players.")
+
 
 @bot.event
 async def on_message(message):
@@ -218,4 +228,4 @@ async def on_command_error(ctx, error):
         await ctx.send("❌ An error occurred!")
 
 # Run the Bot (Replace "YOUR_TOKEN_HERE" with your bot token)
-bot.run('')
+bot.run()
