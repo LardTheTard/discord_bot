@@ -1,6 +1,7 @@
 import discord
 import json
 import random
+from dotenv import load_dotenv
 import os
 from discord.ext import commands
 
@@ -260,4 +261,6 @@ async def on_command_error(ctx, error):
         await ctx.send("❌ An error occurred!")
 
 # Run the Bot (Replace "YOUR_TOKEN_HERE" with your bot token)
-bot.run('')
+load_dotenv()
+token = os.getenv("DISCORD_TOKEN")
+bot.run(token)
