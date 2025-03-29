@@ -32,6 +32,10 @@ try:
 except FileNotFoundError:
     user_data = {}
 
+def initialize_user_data(user_id: str, member: discord.Member):
+    if user_id not in user_data:
+        user_data[user_id] = {'name': member.name, 'chips': 0}
+
 @bot.command()
 async def join(ctx):
     user_id = str(ctx.author.id)
@@ -39,7 +43,7 @@ async def join(ctx):
         await ctx.send(f"You are already in the session, {ctx.author.name}.")
     else:
         # References buy_in_value, which if not set due to not being in json/user_data.json, will return an error. Therefore, must pull data from github first or set it manually using !setbuyin
-        cur_sess[user_id] = {'name': ctx.author.name, 'chips': user_data['buy_in_value']['chips'], 'buyins': -1, 'folded': False}
+        cur_sess[user_id] = {'name': ctx.author.name, 'chips': user_data['buy_in_value']['chips'], 'buyins': -1, 'folded': False, 'contribution': 0}
         with open(user_data_file_path, 'w') as f:
             json.dump(user_data, f) 
         with open(cur_sess_file_path, 'w') as f:
@@ -84,8 +88,7 @@ async def sessstats(ctx):
 @bot.command(aliases=["sc"])
 async def setchips(ctx, member: discord.Member, num: int):
     user_id = str(member.id)
-    if user_id not in user_data:
-        user_data[user_id] = {'name': member.name, 'chips': 0}
+    initialize_user_data(user_id, member)
     user_data[user_id]['chips'] = num
     with open(user_data_file_path, 'w') as f:
         json.dump(user_data, f) 
@@ -116,8 +119,7 @@ async def leaderboard(ctx):
 @bot.command(aliases=["cc"])
 async def changechips(ctx, member: discord.Member, num: int):
     user_id = str(member.id)
-    if user_id not in user_data:
-        user_data[user_id] = {'name': member.name, 'chips': 0}
+    initialize_user_data(user_id, member)
     user_data[user_id]['chips'] += num
     with open(user_data_file_path, 'w') as f:
         json.dump(user_data, f)
@@ -164,6 +166,7 @@ async def start(ctx):
     aliases = ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"]
     deck = []
     player_order = []
+    highest_raise = 0
     for j in suits:
         for i in range(1, 14):
             card = Card(i, aliases[i - 1], j)
@@ -188,26 +191,36 @@ async def start(ctx):
     blind_index %= len(player_order)
     turn_order = blind_index
     while (any(False in i for i in cur_sess)): #while people havent folded, continue
+        turn_order %= len(player_order)
         cur_player = player_order[turn_order]
         if cur_sess[cur_player]['folded'] == False:
             def checkmsg(m): #use for checking message input for current players turn, whether it is valid (ie. from cur_player and in the same channel)
                 return m.author == cur_player and m.channel == ctx.channel
-            await ctx.send(f"It is {cur_player.name}'s turn. You may 'check', 'fold', or 'raise (value here)'")
+            await ctx.send(f"It is {cur_player.name}'s turn. You may 'check', 'call', 'fold', or 'raise (value here)'")
             while True:
                 action = await bot.wait_for("message", timeout = 30.0, check = checkmsg) #checks what the message input is
-                if action.lower() == 'fold' or action.lower() == 'check' or action.startsWith('raise'): #will do stuff based on what action it is
+                if action.lower() == 'fold' or action.lower() == 'check' or action.lower() == 'call' or action.startsWith('raise'): #will do stuff based on what action it is
                     if action.lower() == 'fold': #folds
                         if len(cur_sess) != 0 and ctx.author == cur_player:
                             cur_sess[cur_player.id]['folded'] = True
-                        else:
-                            await ctx.send('You are either not in a session or it is not your turn.')
+                    elif action.lower() == 'call': #placeholder
+                        pass
                     elif action.lower() == 'check': #checks
-                        stuff
+                        #if to check if player contribution matches max_raise
+                        pass
                     else: #raises
-                        stuff
+                        if action.lower().split()[1].isdigit():
+                            raise_value = action.lower().split()[1]
+                        else:
+                            ctx.send("Invalid value/format for a raise, please try again.")
+                            continue
+                        highest_raise += raise_value
+                    turn_order += 1
                     break
                 else:
                     ctx.send(f"Invalid action, please 'check', 'fold', or 'raise (value here)', {cur_player.name}")
+        else:
+            turn_order += 1
 
     
 # unfinished
