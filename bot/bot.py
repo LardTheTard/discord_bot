@@ -10,7 +10,7 @@ intents.members = True
 intents.presences = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
-turn_order_index = 0
+blind_index = 0
 
 @bot.event
 async def on_ready():
@@ -38,7 +38,7 @@ async def join(ctx):
         await ctx.send(f"You are already in the session, {ctx.author.name}.")
     else:
         # References buy_in_value, which if not set due to not being in json/user_data.json, will return an error. Therefore, must pull data from github first or set it manually using !setbuyin
-        cur_sess[user_id] = {'name': ctx.author.name, 'chips': user_data['buy_in_value']['chips'], 'buyins': -1}
+        cur_sess[user_id] = {'name': ctx.author.name, 'chips': user_data['buy_in_value']['chips'], 'buyins': -1, 'folded': False}
         with open(user_data_file_path, 'w') as f:
             json.dump(user_data, f) 
         with open(cur_sess_file_path, 'w') as f:
@@ -183,6 +183,38 @@ async def start(ctx):
         player_order.append(member)
     await ctx.send("Preflop betting round, hands have been sent to players.")
 
+    blind_index += 1
+    blind_index %= len(player_order)
+    turn_order = blind_index
+    while (any(False in i for i in cur_sess)): #while people havent folded, continue
+        cur_player = player_order[turn_order]
+        if cur_sess[cur_player]['folded'] == False:
+            def checkmsg(m): #use for checking message input for current players turn, whether it is valid (ie. from cur_player and in the same channel)
+                return m.author == cur_player and m.channel == ctx.channel
+            await ctx.send(f"It is {cur_player.name}'s turn. You may 'check', 'fold', or 'raise (value here)'")
+            while True:
+                action = await bot.wait_for("message", timeout = 30.0, check = checkmsg) #checks what the message input is
+                if action.lower() == 'fold' or action.lower() == 'check' or action.startsWith('raise'): #will do stuff based on what action it is
+                    if action.lower() == 'fold': #folds
+                        if len(cur_sess) != 0 and ctx.author == cur_player:
+                            cur_sess[cur_player.id]['folded'] = True
+                        else:
+                            await ctx.send('You are either not in a session or it is not your turn.')
+                    elif action.lower() == 'check': #checks
+                        stuff
+                    else: #raises
+                        stuff
+                    break
+                else:
+                    ctx.send(f"Invalid action, please 'check', 'fold', or 'raise (value here)', {cur_player.name}")
+
+    
+# unfinished
+
+
+
+        
+
 
 @bot.event
 async def on_message(message):
@@ -228,4 +260,4 @@ async def on_command_error(ctx, error):
         await ctx.send("❌ An error occurred!")
 
 # Run the Bot (Replace "YOUR_TOKEN_HERE" with your bot token)
-bot.run()
+bot.run('')
