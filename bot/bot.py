@@ -165,7 +165,11 @@ async def start(ctx):
     suits = ["Hearts♥️", "Spades♠️", "Diamonds♦️", "Clubs♣️"]
     aliases = ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"]
     deck = []
+    board = []
     player_order = []
+    global blind_index
+    pot = 0
+    stage_index = 0
     highest_raise = 0
     for j in suits:
         for i in range(1, 14):
@@ -186,39 +190,63 @@ async def start(ctx):
         member = ctx.guild.get_member(id)
         player_order.append(member)
     await ctx.send("Preflop betting round, hands have been sent to players.")
-
-    blind_index += 1
+    # blind_index += 1 (Add this in afterwards, it just changes who has the blind)
     blind_index %= len(player_order)
     turn_order = blind_index
-    while (any(False in i for i in cur_sess)): #while people havent folded, continue
+    while any(not player['folded'] for player in cur_sess.values()): #while people havent folded, continue
         turn_order %= len(player_order)
         cur_player = player_order[turn_order]
-        if cur_sess[cur_player]['folded'] == False:
+        cur_id = str(cur_player.id)
+        #Does NOT account for raising and matching the raise to go to the next stage
+        if turn_order == blind_index:
+            if stage_index == 1:
+                for i in range(3):
+                    board.append(deck.pop(0))
+                await ctx.send(f"**Flop:**\n{board[0]}\n{board[1]}\n{board[2]}")
+            elif stage_index == 2:
+                board.append(deck.pop(0))
+                await ctx.send(f"**Turn:**\n{board[0]}\n{board[1]}\n{board[2]}\n{board[3]}")
+            elif stage_index == 3:
+                board.append(deck.pop(0))
+                await ctx.send(f"**River:**\n{board[0]}\n{board[1]}\n{board[2]}\n{board[3]}\n{board[4]}")
+            stage_index += 1
+        if cur_sess[cur_id]['folded'] == False:
             def checkmsg(m): #use for checking message input for current players turn, whether it is valid (ie. from cur_player and in the same channel)
-                return m.author == cur_player and m.channel == ctx.channel
+                return m.author.id == cur_player.id and m.channel == ctx.channel
             await ctx.send(f"It is {cur_player.name}'s turn. You may 'check', 'call', 'fold', or 'raise (value here)'")
             while True:
-                action = await bot.wait_for("message", timeout = 30.0, check = checkmsg) #checks what the message input is
-                if action.lower() == 'fold' or action.lower() == 'check' or action.lower() == 'call' or action.startsWith('raise'): #will do stuff based on what action it is
+                action = await bot.wait_for("message", timeout = 30.0, check = checkmsg) #checks what the message input is, also maybe catch timeout error
+                action = action.content
+                if action.lower() == 'fold' or action.lower() == 'check' or action.lower() == 'call' or action.startswith('raise'): #will do stuff based on what action it is
                     if action.lower() == 'fold': #folds
                         if len(cur_sess) != 0 and ctx.author == cur_player:
-                            cur_sess[cur_player.id]['folded'] = True
-                    elif action.lower() == 'call': #placeholder
-                        pass
+                            cur_sess[cur_id]['folded'] = True
+                        # forgot to dump the folded change into the cur_sess json, so only the cur_sess has the folded change
+                    elif action.lower() == 'call': #calls, if raise is 0, works the same as checking
+                        cur_sess[cur_id]['chips'] -= highest_raise - cur_sess[cur_id]['contribution']
+                        cur_sess[cur_id]['contribution'] = highest_raise
                     elif action.lower() == 'check': #checks
-                        #if to check if player contribution matches max_raise
-                        pass
+                        if cur_sess[cur_id]['contribution'] != highest_raise:
+                            ctx.send(f"Cannot check, must call/raise to match bet. {highest_raise - cur_sess[cur_id]['contribution']} to match.")
+                            continue
                     else: #raises
-                        if action.lower().split()[1].isdigit():
-                            raise_value = action.lower().split()[1]
+                        if len(action.lower().split()) == 2 and action.lower().split()[1].isdigit():
+                            raise_value = int(action.lower().split()[1])
                         else:
                             ctx.send("Invalid value/format for a raise, please try again.")
                             continue
+                        cur_sess[cur_id]['chips'] -= highest_raise - cur_sess[cur_id]['contribution'] + raise_value
+                        cur_sess[cur_id]['contribution'] = highest_raise + raise_value
                         highest_raise += raise_value
+                        with open(cur_sess_file_path, 'w') as f:
+                            json.dump(cur_sess, f) 
                     turn_order += 1
+                    pot = 0
+                    for i in cur_sess:
+                        pot += cur_sess[i]['contribution']
                     break
                 else:
-                    ctx.send(f"Invalid action, please 'check', 'fold', or 'raise (value here)', {cur_player.name}")
+                    ctx.send(f"Invalid action, please 'check', 'call', 'fold', or 'raise (value here)', {cur_player.name}")
         else:
             turn_order += 1
 
@@ -271,9 +299,10 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.CommandNotFound):
         await ctx.send("❌ Unknown command! Type `!help` to see available commands.")
     else:
+        await ctx.send(error)
         await ctx.send("❌ An error occurred!")
 
 # Run the Bot (Replace "YOUR_TOKEN_HERE" with your bot token)
 load_dotenv()
 token = os.getenv("DISCORD_TOKEN")
-bot.run(token)
+bot.run('')
