@@ -11,8 +11,8 @@ class poker(commands.Cog):
         self.blind_index = 0
 
         # Finds the file paths to the json files, since they're stored in the 'json' folder
-        self.cur_sess_file_path = os.path.join(os.path.dirname(__file__), '..', 'json', 'self.cur_sess.json')
-        self.user_data_file_path = os.path.join(os.path.dirname(__file__), '..', 'json', 'self.user_data.json')
+        self.cur_sess_file_path = os.path.join(os.path.dirname(__file__), '..', 'json', 'cur_sess.json')
+        self.user_data_file_path = os.path.join(os.path.dirname(__file__), '..', 'json', 'user_data.json')
 
         # Opens json files for reading
         try:
@@ -25,6 +25,10 @@ class poker(commands.Cog):
                 self.user_data = json.load(f)
         except FileNotFoundError:
             self.user_data = {}
+
+    def initialize_user_data(self, user_id: str, member: discord.Member):
+            if user_id not in self.user_data:
+                self.user_data[user_id] = {'name': member.name, 'chips': 0}
 
     @commands.command()
     async def join(self, ctx):
@@ -77,13 +81,8 @@ class poker(commands.Cog):
 
     @commands.command(aliases=["sc"])
     async def setchips(self, ctx, member: discord.Member, num: int):
-
-        def initialize_user_data(self, user_id: str, member: discord.Member):
-            if user_id not in self.user_data:
-                self.user_data[user_id] = {'name': member.name, 'chips': 0}
-        
         user_id = str(member.id)
-        initialize_user_data(user_id, member)
+        self.initialize_user_data(user_id, member)
         self.user_data[user_id]['chips'] = num
         with open(self.user_data_file_path, 'w') as f:
             json.dump(self.user_data, f) 
@@ -113,13 +112,8 @@ class poker(commands.Cog):
 
     @commands.command(aliases=["cc"])
     async def changechips(self, ctx, member: discord.Member, num: int):
-
-        def initialize_user_data(self, user_id: str, member: discord.Member):
-            if user_id not in self.user_data:
-                self.user_data[user_id] = {'name': member.name, 'chips': 0}
-
         user_id = str(member.id)
-        initialize_user_data(user_id, member)
+        self.initialize_user_data(user_id, member)
         self.user_data[user_id]['chips'] += num
         with open(self.user_data_file_path, 'w') as f:
             json.dump(self.user_data, f)
@@ -168,7 +162,6 @@ class poker(commands.Cog):
         deck = []
         board = []
         player_order = []
-        global blind_index
         pot = 0
         stage_index = 0
         highest_raise = 0
@@ -248,7 +241,7 @@ class poker(commands.Cog):
                             if len(action.lower().split()) == 2 and action.lower().split()[1].isdigit():
                                 raise_value = int(action.lower().split()[1])
                             else:
-                                ctx.send("Invalid value/format for a raise, please try again.")
+                                await ctx.send("Invalid value/format for a raise, please try again.")
                                 continue
                             self.cur_sess[cur_id]['chips'] -= highest_raise - self.cur_sess[cur_id]['contribution'] + raise_value
                             self.cur_sess[cur_id]['contribution'] = highest_raise + raise_value
@@ -286,10 +279,6 @@ class poker(commands.Cog):
 
         if 'hello' in message.content.lower():
             await message.channel.send('Hello!')
-        
-        await self.bot.process_commands(message)
-
-
 
     # Simple commands
     @commands.command()
@@ -323,5 +312,5 @@ class poker(commands.Cog):
             await ctx.send(error)
             await ctx.send("❌ An error occurred!")
 
-def setup(bot):
-    bot.add_cog(poker(bot))
+async def setup(bot):
+    await bot.add_cog(poker(bot))
