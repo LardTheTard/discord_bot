@@ -1,0 +1,5 @@
+use the following to run the bot:
+heroku ps:scale worker=1
+
+use the following to check the status of the bot:
+heroku logs --tail
