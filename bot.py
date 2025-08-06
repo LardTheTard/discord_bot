@@ -6,8 +6,9 @@ import os
 from datetime import datetime
 from discord.ext import commands
 
-TRACKED_GUILD_ID = 942437342180962344
-RECIEVER_ID = 632020492576096268 
+load_dotenv()
+TRACKED_GUILD_ID = os.getenv("TRACKED_GUILD_ID")
+RECIEVER_ID = os.getenv("RECIEVER_ID")
 presence_cache = {}
 
 intents = discord.Intents.default()
@@ -367,6 +368,5 @@ async def on_command_error(ctx, error):
         await ctx.send("❌ An error occurred!")
 
 # Run the Bot (Replace "YOUR_TOKEN_HERE" with your bot token)
-load_dotenv()
 token = os.getenv("DISCORD_TOKEN")
 bot.run(token)
