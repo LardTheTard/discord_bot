@@ -7,8 +7,9 @@ from datetime import datetime
 from discord.ext import commands
 
 load_dotenv()
-TRACKED_GUILD_ID = os.getenv("TRACKED_GUILD_ID")
-RECIEVER_ID = os.getenv("RECIEVER_ID")
+TRACKED_GUILD_ID = (int) (os.getenv("TRACKED_GUILD_ID"))
+TRACKED_USER_ID = (int) (os.getenv("TRACKED_USER_ID"))
+RECIEVER_ID = (int) (os.getenv("RECIEVER_ID"))
 presence_cache = {}
 
 intents = discord.Intents.default()
@@ -35,8 +36,12 @@ async def on_presence_update(before, after):
     current_activities = set(a.name for a in after.activities if a and a.name)
     timestamp = datetime.now().strftime("%Y-%m-%d %I:%M:%S %p")
     
-    reciever_mutual_guild = bot.get_guild(TRACKED_GUILD_ID)
-    reciever = await reciever_mutual_guild.fetch_member(RECIEVER_ID)
+    mutual_guild = bot.get_guild(TRACKED_GUILD_ID)
+    tracked_user = mutual_guild.get_member(TRACKED_USER_ID) or await mutual_guild.fetch_member(TRACKED_USER_ID)
+    #delete
+    tracked_user2 = mutual_guild.get_member(435185852755476480) or await mutual_guild.fetch_member(435185852755476480)
+    #delete
+    reciever = mutual_guild.get_member(RECIEVER_ID) or await mutual_guild.fetch_member(RECIEVER_ID)
 
     prev_state = presence_cache.get(user_id, {
         "status": before.status,
@@ -54,6 +59,14 @@ async def on_presence_update(before, after):
     }
 
     if status_changed:
+        if user_id == TRACKED_USER_ID and str(current_status) == "dnd":
+            await tracked_user.send("I love you ♥")
+        
+        #delete
+        if user_id == 435185852755476480 and str(current_status) == "dnd":
+            await tracked_user2.send("nigga")
+        #delete
+        
         print(f"[{timestamp}]: {after.name} changed status from {prev_state['status']} to {current_status}. {'' if activity_changed else '\n'}")
         await reciever.send(f"[{timestamp}]: {after.name} changed status from {prev_state['status']} to {current_status}.")
 
