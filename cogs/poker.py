@@ -30,6 +30,12 @@ class poker(commands.Cog):
             if user_id not in self.user_data:
                 self.user_data[user_id] = {'name': member.name, 'chips': 0}
 
+    def dump_info(self, user_data, cur_sess):
+        with open(self.user_data_file_path, 'w') as f:
+            json.dump(user_data, f) 
+        with open(self.cur_sess_file_path, 'w') as f:
+            json.dump(cur_sess, f) 
+
     @commands.command()
     async def join(self, ctx):
         user_id = str(ctx.author.id)
@@ -38,10 +44,7 @@ class poker(commands.Cog):
         else:
             # References buy_in_value, which if not set due to not being in json/self.user_data.json, will return an error. Therefore, must pull data from github first or set it manually using !setbuyin
             self.cur_sess[user_id] = {'name': ctx.author.name, 'chips': self.user_data['buy_in_value']['chips'], 'buyins': -1, 'folded': False, 'contribution': 0}
-            with open(self.user_data_file_path, 'w') as f:
-                json.dump(self.user_data, f) 
-            with open(self.cur_sess_file_path, 'w') as f:
-                json.dump(self.cur_sess, f) 
+            self.dump_info(self.user_data, self.cur_sess)
             await ctx.send(f"{ctx.author.name} is now in the session.")
 
     @commands.command()
@@ -52,10 +55,7 @@ class poker(commands.Cog):
         else:
             self.user_data[user_id]['chips'] += self.cur_sess[user_id]['chips'] + self.cur_sess[user_id]['buyins'] * self.user_data['buy_in_value']['chips']
             del self.cur_sess[user_id]
-            with open(self.user_data_file_path, 'w') as f:
-                json.dump(self.user_data, f) 
-            with open(self.cur_sess_file_path, 'w') as f:
-                json.dump(self.cur_sess, f) 
+            self.dump_info(self.user_data, self.cur_sess)
             await ctx.send(f"{ctx.author.name} left the session.")
 
     @commands.command(aliases=["ss"])
@@ -84,8 +84,7 @@ class poker(commands.Cog):
         user_id = str(member.id)
         self.initialize_user_data(user_id, member)
         self.user_data[user_id]['chips'] = num
-        with open(self.user_data_file_path, 'w') as f:
-            json.dump(self.user_data, f) 
+        self.dump_info(self.user_data, self.cur_sess)
         await ctx.send(f"{member.name}'s now has {num} chips.")
 
     @commands.command(aliases=["lb"])
@@ -115,33 +114,29 @@ class poker(commands.Cog):
         user_id = str(member.id)
         self.initialize_user_data(user_id, member)
         self.user_data[user_id]['chips'] += num
-        with open(self.user_data_file_path, 'w') as f:
-            json.dump(self.user_data, f)
+        self.dump_info(self.user_data, self.cur_sess)
         await ctx.send(f"{member.name}'s chips have been updated to {self.user_data[user_id]['chips']}.")
 
     @commands.command()
     async def reset(self, ctx, member: discord.Member):
         user_id = str(member.id)
         self.user_data[user_id] = {'name': member.name, 'chips': 0}
-        with open(self.user_data_file_path, 'w') as f:
-            json.dump(self.user_data, f)
+        self.dump_info(self.user_data, self.cur_sess)
         await ctx.send(f"{member.name}'s stats have been reset.")
 
     @commands.command()
     async def resetseason(self, ctx):
         for i in self.user_data:
             self.user_data[i] = {'name': self.user_data[i]['name'], 'chips': 0}
-        with open(self.user_data_file_path, 'w') as f:
-            json.dump(self.user_data, f)
+        self.dump_info(self.user_data, self.cur_sess)
         await ctx.send("All stats have been reset.")
 
     @commands.command()
     async def setbuyin(self, ctx, num: int):
         if len(self.cur_sess) == 0:
             self.user_data['buy_in_value'] = {'name': None, 'chips': num}
-            with open(self.user_data_file_path, 'w') as f:
-                json.dump(self.user_data, f)
-                await ctx.send(f"Buy-in value changed to {num}.")
+            self.dump_info(self.user_data, self.cur_sess)
+            await ctx.send(f"Buy-in value changed to {num}.")
         else:
             await ctx.send("A session is current ongoing, please end the session before changing buy-in values.")
 
@@ -247,8 +242,7 @@ class poker(commands.Cog):
                             self.cur_sess[cur_id]['contribution'] = highest_raise + raise_value
                             highest_raise += raise_value
                             raised_player_index = turn_order
-                        with open(self.cur_sess_file_path, 'w') as f:
-                            json.dump(self.cur_sess, f) 
+                        self.dump_info(self.user_data, self.cur_sess)
                         turn_order += 1
                         pot = 0
                         for i in self.cur_sess:
