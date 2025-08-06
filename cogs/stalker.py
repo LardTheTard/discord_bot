@@ -21,9 +21,6 @@ class stalker(commands.Cog):
         
         mutual_guild = self.bot.get_guild(TRACKED_GUILD_ID)
         tracked_user = mutual_guild.get_member(TRACKED_USER_ID) or await mutual_guild.fetch_member(TRACKED_USER_ID)
-        #delete
-        tracked_user2 = mutual_guild.get_member(435185852755476480) or await mutual_guild.fetch_member(435185852755476480)
-        #delete
         reciever = mutual_guild.get_member(RECIEVER_ID) or await mutual_guild.fetch_member(RECIEVER_ID)
 
         prev_state = self.presence_cache.get(user_id, {
@@ -44,13 +41,8 @@ class stalker(commands.Cog):
         if status_changed:
             if user_id == TRACKED_USER_ID and str(current_status) == "dnd":
                 await tracked_user.send("I love you ♥")
-            
-            #delete
-            if user_id == 435185852755476480 and str(current_status) == "dnd":
-                await tracked_user2.send("nigga")
-            #delete
-            
-            print(f"[{timestamp}]: {after.name} changed status from {prev_state['status']} to {current_status}. {'' if activity_changed else '\n'}")
+        
+            print(f"[{timestamp}]: {after.name} changed status from {prev_state['status']} to {current_status}. " + ('' if activity_changed else '\n'))
             await reciever.send(f"[{timestamp}]: {after.name} changed status from {prev_state['status']} to {current_status}.")
 
         if activity_changed:
