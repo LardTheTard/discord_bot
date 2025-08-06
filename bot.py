@@ -3,7 +3,12 @@ import json
 import random
 from dotenv import load_dotenv
 import os
+from datetime import datetime
 from discord.ext import commands
+
+TRACKED_GUILD_ID = 942437342180962344
+RECIEVER_ID = 632020492576096268 
+presence_cache = {}
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -17,15 +22,54 @@ blind_index = 0
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
 
-cur_sess_file_path = os.path.join(os.path.dirname(__file__), '..', 'json', 'cur_sess.json')
-user_data_file_path = os.path.join(os.path.dirname(__file__), '..', 'json', 'user_data.json')
+# Loads cogs in /cogs folder
+# for filename in os.listdir('./cogs'):
+#     if filename.endswith('.py'):
+#         bot.load_extension(f'cogs.{filename[:-3]}')
 
+@bot.event
+async def on_presence_update(before, after):
+    user_id = after.id
+    current_status = after.status
+    current_activities = set(a.name for a in after.activities if a and a.name)
+    timestamp = datetime.now().strftime("%Y-%m-%d %I:%M:%S %p")
+    
+    reciever_mutual_guild = bot.get_guild(TRACKED_GUILD_ID)
+    reciever = await reciever_mutual_guild.fetch_member(RECIEVER_ID)
+
+    prev_state = presence_cache.get(user_id, {
+        "status": before.status,
+        "activities": set(a.name for a in before.activities if a and a.name)
+    })
+
+    # Only log if there's a meaningful change
+    status_changed = prev_state["status"] != current_status
+    activity_changed = prev_state["activities"] != current_activities
+
+    # Update cache
+    presence_cache[user_id] = {
+        "status": current_status,
+        "activities": current_activities
+    }
+
+    if status_changed:
+        print(f"[{timestamp}]: {after.name} changed status from {prev_state['status']} to {current_status}. {'' if activity_changed else '\n'}")
+        await reciever.send(f"[{timestamp}]: {after.name} changed status from {prev_state['status']} to {current_status}.")
+
+    if activity_changed:
+        print(f"[{timestamp}]: {after.name} changed activity from {', '.join(prev_state['activities']) or 'None'} to {', '.join(current_activities) or 'None'}\n")
+        await reciever.send(f"[{timestamp}]: {after.name} changed activity from {', '.join(prev_state['activities']) or 'None'} to {', '.join(current_activities) or 'None'}\n")
+
+# Finds the file paths to the json files, since they're stored in the 'json' folder
+cur_sess_file_path = os.path.join(os.path.dirname(__file__), 'json', 'cur_sess.json')
+user_data_file_path = os.path.join(os.path.dirname(__file__), 'json', 'user_data.json')
+
+# Opens json files for reading
 try:
     with open(cur_sess_file_path, 'r') as f:
         cur_sess = json.load(f)
 except FileNotFoundError:
     cur_sess = {}
-
 try:
     with open(user_data_file_path, 'r') as f:
         user_data = json.load(f)
@@ -192,13 +236,21 @@ async def start(ctx):
     await ctx.send("Preflop betting round, hands have been sent to players.")
     # blind_index += 1 (Add this in afterwards, it just changes who has the blind)
     blind_index %= len(player_order)
+    raised_player_index = blind_index
     turn_order = blind_index
-    while any(not player['folded'] for player in cur_sess.values()): #while people havent folded, continue
+    while True: #while people havent folded, continue
+    #any(not player['folded'] for player in cur_sess.values())
+        playing = 0
+        for player in cur_sess.values():
+            if not player['folded']:
+                playing += 1
+        if playing <= 1:
+            break
         turn_order %= len(player_order)
         cur_player = player_order[turn_order]
         cur_id = str(cur_player.id)
         #Does NOT account for raising and matching the raise to go to the next stage
-        if turn_order == blind_index:
+        if turn_order == raised_player_index:
             if stage_index == 1:
                 for i in range(3):
                     board.append(deck.pop(0))
@@ -215,19 +267,25 @@ async def start(ctx):
                 return m.author.id == cur_player.id and m.channel == ctx.channel
             await ctx.send(f"It is {cur_player.name}'s turn. You may 'check', 'call', 'fold', or 'raise (value here)'")
             while True:
-                action = await bot.wait_for("message", timeout = 30.0, check = checkmsg) #checks what the message input is, also maybe catch timeout error
+                #action = await bot.wait_for("message", timeout = 30.0, check = checkmsg)
+                action = await bot.wait_for("message", check = checkmsg) #checks what the message input is, also maybe catch timeout error
                 action = action.content
                 if action.lower() == 'fold' or action.lower() == 'check' or action.lower() == 'call' or action.startswith('raise'): #will do stuff based on what action it is
                     if action.lower() == 'fold': #folds
+                        await ctx.send("what the hellyante")
+                        await ctx.send(cur_player.name)
                         if len(cur_sess) != 0 and ctx.author == cur_player:
                             cur_sess[cur_id]['folded'] = True
+                            await ctx.send("what the fuck")
                         # forgot to dump the folded change into the cur_sess json, so only the cur_sess has the folded change
                     elif action.lower() == 'call': #calls, if raise is 0, works the same as checking
                         cur_sess[cur_id]['chips'] -= highest_raise - cur_sess[cur_id]['contribution']
                         cur_sess[cur_id]['contribution'] = highest_raise
+                        print('current highest that contribution is adding is', highest_raise, 'and the cur_id is', cur_id)
                     elif action.lower() == 'check': #checks
+                        print(highest_raise)
                         if cur_sess[cur_id]['contribution'] != highest_raise:
-                            ctx.send(f"Cannot check, must call/raise to match bet. {highest_raise - cur_sess[cur_id]['contribution']} to match.")
+                            await ctx.send(f"Cannot check, must call/raise to match bet. {highest_raise - cur_sess[cur_id]['contribution']} to match.")
                             continue
                     else: #raises
                         if len(action.lower().split()) == 2 and action.lower().split()[1].isdigit():
@@ -238,17 +296,23 @@ async def start(ctx):
                         cur_sess[cur_id]['chips'] -= highest_raise - cur_sess[cur_id]['contribution'] + raise_value
                         cur_sess[cur_id]['contribution'] = highest_raise + raise_value
                         highest_raise += raise_value
-                        with open(cur_sess_file_path, 'w') as f:
-                            json.dump(cur_sess, f) 
+                        raised_player_index = turn_order
+                    with open(cur_sess_file_path, 'w') as f:
+                        json.dump(cur_sess, f) 
                     turn_order += 1
                     pot = 0
                     for i in cur_sess:
                         pot += cur_sess[i]['contribution']
+                    print('pot:', pot)
                     break
                 else:
                     ctx.send(f"Invalid action, please 'check', 'call', 'fold', or 'raise (value here)', {cur_player.name}")
         else:
             turn_order += 1
+    for player in cur_sess.values():
+        if not player['folded']:
+            await ctx.send(f"{player['name']} is the winner!")
+            break
 
     
 # unfinished
@@ -305,4 +369,4 @@ async def on_command_error(ctx, error):
 # Run the Bot (Replace "YOUR_TOKEN_HERE" with your bot token)
 load_dotenv()
 token = os.getenv("DISCORD_TOKEN")
-bot.run('')
+bot.run(token)
