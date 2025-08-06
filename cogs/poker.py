@@ -142,7 +142,8 @@ class poker(commands.Cog):
 
     @commands.command()
     async def start(self, ctx):
-
+        
+        # Defines the cards as objects
         class Card:
             def __init__(self, value, alias, suit):
                 self.value = value
@@ -152,6 +153,7 @@ class poker(commands.Cog):
             def __str__(self):
                 return f"{self.alias} of {self.suit}"
 
+        # Variable definitions
         suits = ["Hearts♥️", "Spades♠️", "Diamonds♦️", "Clubs♣️"]
         aliases = ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"]
         deck = []
@@ -160,12 +162,19 @@ class poker(commands.Cog):
         pot = 0
         stage_index = 0
         highest_raise = 0
+
+        # Fills the deck with Card objects and shuffles it
         for j in suits:
             for i in range(1, 14):
                 card = Card(i, aliases[i - 1], j)
                 deck.append(card)
         random.shuffle(deck)
+        
+        # -- Debug Code --
         # deck_str = ", ".join(str(card) for card in deck)
+        # await ctx.send(deck_str)
+
+        # Distribute hands to players
         for id in self.cur_sess:
             id = int(id.strip())
             try:
@@ -173,28 +182,37 @@ class poker(commands.Cog):
                 await member.send(f"**Hand:**\n{deck.pop(0)}\n{deck.pop(0)}")
             except discord.Forbidden:
                 await ctx.send(f"❌ Could not DM {member.name}. They may have DMs disabled.")
-        # await ctx.send(deck_str)
+        await ctx.send("Preflop betting round, hands have been sent to players.")
+
+        # Creates the table/player order
         for id in self.cur_sess:
             id = int(id.strip())
-            member = ctx.guild.get_member(id)
+            member = ctx.guild.get_member(id) # guild.fetch_member() is an unnecessary API call, they will usually be stored in cache due to recent activity
             player_order.append(member)
-        await ctx.send("Preflop betting round, hands have been sent to players.")
-        # blind_index += 1 (Add this in afterwards, it just changes who has the blind)
-        blind_index %= len(player_order)
-        raised_player_index = blind_index
+
+        # Setup for the blind and who goes first !!NEEDS REVISING / MAYBE USE !START TO START EVERY GAME SO blind_index HAS TO BE STORED GLOBALLY!!
+        blind_index %= len(player_order) # Also blind_index is different from self.blind_index
+        raised_player_index = blind_index # Lowkey just like burn it and redo it later
         turn_order = blind_index
-        while True: #while people havent folded, continue
-        #any(not player['folded'] for player in self.cur_sess.values())
+    #   blind_index += 1 // Add this in afterwards, it just changes who has the blind
+
+        # Starts the actual game, sets up a loop so that while there are people who haven't folded, the game will continue until showdown
+        while True: # any(not player['folded'] for player in self.cur_sess.values())
+            
+            # Figures out how many people are in the hand
             playing = 0
             for player in self.cur_sess.values():
                 if not player['folded']:
                     playing += 1
             if playing <= 1:
                 break
+
+            # Sets the current turn order, and the corresponding player and their id
             turn_order %= len(player_order)
             cur_player = player_order[turn_order]
             cur_id = str(cur_player.id)
-            #Does NOT account for raising and matching the raise to go to the next stage
+
+            # Does NOT account for raising and matching the raise to go to the next stage
             if turn_order == raised_player_index:
                 if stage_index == 1:
                     for i in range(3):
