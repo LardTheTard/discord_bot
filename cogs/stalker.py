@@ -11,6 +11,7 @@ class stalker(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.presence_cache = {}
+        self.SendMessage = False
 
     @commands.Cog.listener()
     async def on_presence_update(self, before, after):
@@ -41,13 +42,25 @@ class stalker(commands.Cog):
         if status_changed:
             if user_id == TRACKED_USER_ID and str(current_status) == "dnd":
                 await tracked_user.send("I love you ♥")
-        
             print(f"[{timestamp}]: {after.name} changed status from {prev_state['status']} to {current_status}. " + ('' if activity_changed else '\n'))
-            await reciever.send(f"[{timestamp}]: {after.name} changed status from {prev_state['status']} to {current_status}.")
+            if self.SendMessage:
+                await reciever.send(f"[{timestamp}]: {after.name} changed status from {prev_state['status']} to {current_status}.")
 
         if activity_changed:
             print(f"[{timestamp}]: {after.name} changed activity from {', '.join(prev_state['activities']) or 'None'} to {', '.join(current_activities) or 'None'}\n")
-            await reciever.send(f"[{timestamp}]: {after.name} changed activity from {', '.join(prev_state['activities']) or 'None'} to {', '.join(current_activities) or 'None'}\n")
+            if self.SendMessage:
+                await reciever.send(f"[{timestamp}]: {after.name} changed activity from {', '.join(prev_state['activities']) or 'None'} to {', '.join(current_activities) or 'None'}\n")
+
+    @commands.command()
+    async def sendmsgs(self, ctx):
+        user_id = str(ctx.author.id)
+        if user_id == RECIEVER_ID and self.SendMessage:
+            self.SendMessage = False
+            await ctx.send("Stopped sending messages to reciever.")
+        elif user_id == RECIEVER_ID and not self.SendMessage:
+            self.SendMessage = True
+            await ctx.send("Started sending messages to reciever.")
+        
 
 async def setup(bot):
     await bot.add_cog(stalker(bot))
