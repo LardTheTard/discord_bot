@@ -54,12 +54,14 @@ class stalker(commands.Cog):
     @commands.command()
     async def sendmsgs(self, ctx):
         user_id = str(ctx.author.id)
-        if user_id == RECIEVER_ID and self.SendMessage:
+        if user_id == str(RECIEVER_ID) and self.SendMessage:
             self.SendMessage = False
             await ctx.send("Stopped sending messages to reciever.")
-        elif user_id == RECIEVER_ID and not self.SendMessage:
+        elif user_id == str(RECIEVER_ID) and not self.SendMessage:
             self.SendMessage = True
             await ctx.send("Started sending messages to reciever.")
+        else:
+            await ctx.send("You are not the reciever.")
         
 
 async def setup(bot):
