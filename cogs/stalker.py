@@ -18,6 +18,7 @@ class stalker(commands.Cog):
 
     @commands.Cog.listener()
     async def on_presence_update(self, before, after):
+        print("booyah")
         user_id = after.id
         current_status = after.status
         current_activities = set(a.name for a in after.activities if a and a.name)
@@ -80,7 +81,7 @@ class stalker(commands.Cog):
             await ctx.send("Stopped sending messages to home server.")
         elif guild_id == str(HOME_GUILD_ID) and not self.ServerUpdatesToggled:
             self.ServerUpdatesToggled = True
-            await ctx.send("Stopped sending messages to home server.")
+            await ctx.send("Started sending messages to home server.")
         else:
             await ctx.send("This is not the home server.")
         
