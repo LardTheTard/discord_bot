@@ -2,7 +2,10 @@ import discord
 import json
 import random
 import os
+from dotenv import load_dotenv
 from discord.ext import commands
+
+RECIEVER_ID = (int) (os.getenv("RECIEVER_ID"))
 
 class poker(commands.Cog):
     def __init__(self, bot):
@@ -150,7 +153,10 @@ class poker(commands.Cog):
 
     @commands.command()
     async def start(self, ctx):
-        
+        if len(self.cur_sess) < 1:
+            await ctx.send("There are currently no players in the session.")
+            return
+
         # Defines the cards as objects
         class Card:
             def __init__(self, value, alias, suit):
@@ -296,16 +302,23 @@ class poker(commands.Cog):
     async def on_message(self, message):
         if message.author == self.bot.user:
             return
-
+        user_id = str(message.author.id)
+        if self.user_data.get(user_id) is None: # If they don't exist in user_data yet, initialize
+            self.initialize_user_data(user_id, message.author)
+            self.dump_info(self.user_data, self.cur_sess)
         if 'hello' in message.content.lower():
             await message.channel.send('Hello!')
 
     # Simple commands
     @commands.command()
     async def stop(self, ctx):
-        await ctx.send("bot is shutting down")
-        print('bot shut down')
-        await self.bot.close()   
+        user_id = str(ctx.author.id)
+        if user_id == RECIEVER_ID:
+            await ctx.send("bot is shutting down")
+            print('bot shut down')
+            await self.bot.close()   
+        else: 
+            await ctx.send("Shut down failed, not the reciever.")
 
     # 📌 Command: Get User Info
     @commands.command()

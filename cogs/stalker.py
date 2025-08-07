@@ -60,7 +60,7 @@ class stalker(commands.Cog):
             if self.ServerUpdatesToggled:
                 await home_guild_main_channel.send(f"[{timestamp}]: {after.name} changed activity from {', '.join(prev_state['activities']) or 'None'} to {', '.join(current_activities) or 'None'}\n")
 
-    @commands.command()
+    @commands.command()(aliases=["tdms"])
     async def toggledms(self, ctx):
         user_id = str(ctx.author.id)
         if user_id == str(RECIEVER_ID) and self.DmsToggled:
@@ -72,7 +72,7 @@ class stalker(commands.Cog):
         else:
             await ctx.send("You are not the reciever.")
 
-    @commands.command()
+    @commands.command()(aliases=["tsus"])
     async def toggleserverupdates(self, ctx):
         guild_id = str(ctx.guild.id)
         if guild_id == str(HOME_GUILD_ID) and self.ServerUpdatesToggled:
