@@ -14,6 +14,10 @@ class poker(commands.Cog):
         self.cur_sess_file_path = os.path.join(os.path.dirname(__file__), '..', 'json', 'cur_sess.json')
         self.user_data_file_path = os.path.join(os.path.dirname(__file__), '..', 'json', 'user_data.json')
 
+        # Ensures the json folder directory exists
+        os.makedirs(os.path.dirname(self.cur_sess_file_path), exist_ok=True)
+        os.makedirs(os.path.dirname(self.user_data_file_path), exist_ok=True)
+
         # Opens json files for reading
         try:
             with open(self.cur_sess_file_path, 'r') as f:
