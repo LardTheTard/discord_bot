@@ -18,7 +18,6 @@ class stalker(commands.Cog):
 
     @commands.Cog.listener()
     async def on_presence_update(self, before, after):
-        print("booyah")
         user_id = after.id
         current_status = after.status
         current_activities = set(a.name for a in after.activities if a and a.name)
@@ -26,7 +25,7 @@ class stalker(commands.Cog):
         
         mutual_guild = self.bot.get_guild(TRACKED_GUILD_ID)
         home_guild = self.bot.get_guild(HOME_GUILD_ID)
-        home_guild_main_channel = self.guild.get_channel(HOME_GUILD_CHANNEL_ID)
+        home_guild_main_channel = home_guild.get_channel(HOME_GUILD_CHANNEL_ID)
         tracked_user = mutual_guild.get_member(TRACKED_USER_ID) or await mutual_guild.fetch_member(TRACKED_USER_ID)
         reciever = mutual_guild.get_member(RECIEVER_ID) or await mutual_guild.fetch_member(RECIEVER_ID)
 
