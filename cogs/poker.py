@@ -19,12 +19,16 @@ class poker(commands.Cog):
             with open(self.cur_sess_file_path, 'r') as f:
                 self.cur_sess = json.load(f)
         except FileNotFoundError:
+            with open(self.cur_sess_file_path, 'w') as f:
+                json.dump({}, f)
             self.cur_sess = {}
         try:
             with open(self.user_data_file_path, 'r') as f:
                 self.user_data = json.load(f)
         except FileNotFoundError:
-            self.user_data = {}
+            with open(self.user_data_file_path, 'w') as f: # Unfortunately, when run on Heroku, everytime the bot restarts all of the user_data and cur_sess data is reset.
+                json.dump({}, f)                           # This means that data will not carry between sessions, as the jsons are deleted when the bot turns off
+            self.user_data = {}                            # This is because the jsons are gitignored and not uploaded to the repo, and also do not exist to Heroku
 
     def initialize_user_data(self, user_id: str, member: discord.Member):
             if user_id not in self.user_data:
@@ -191,9 +195,9 @@ class poker(commands.Cog):
             player_order.append(member)
 
         # Setup for the blind and who goes first !!NEEDS REVISING / MAYBE USE !START TO START EVERY GAME SO blind_index HAS TO BE STORED GLOBALLY!!
-        blind_index %= len(player_order) # Also blind_index is different from self.blind_index
-        raised_player_index = blind_index # Lowkey just like burn it and redo it later
-        turn_order = blind_index
+        self.blind_index %= len(player_order) 
+        raised_player_index = self.blind_index # Lowkey just like burn it and redo it later
+        turn_order = self.blind_index
     #   blind_index += 1 // Add this in afterwards, it just changes who has the blind
 
         # Starts the actual game, sets up a loop so that while there are people who haven't folded, the game will continue until showdown
