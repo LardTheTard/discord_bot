@@ -1,5 +1,6 @@
 from discord.ext import commands
 from datetime import datetime
+import random
 from dotenv import load_dotenv
 import os
 
@@ -46,7 +47,11 @@ class stalker(commands.Cog):
 
         if status_changed:
             if user_id == TRACKED_USER_ID and str(current_status) == "dnd":
-                await tracked_user.send("I love you ♥")
+                rng = random.randint(1, 100)
+                if rng == 1:
+                    await tracked_user.send("I hate you hehe")
+                else:
+                    await tracked_user.send("I love you ♥")
             print(f"[{timestamp}]: {after.name} changed status from {prev_state['status']} to {current_status}. " + ('' if activity_changed else '\n'))
             if self.DmsToggled:
                 await reciever.send(f"[{timestamp}]: {after.name} changed status from {prev_state['status']} to {current_status}.")

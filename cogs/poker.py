@@ -189,7 +189,7 @@ class poker(commands.Cog):
         # await ctx.send(deck_str)
 
         # Distribute hands to players
-        for id in self.cur_sess:
+        for id in self.cur_sess: # Gotta create a cache to store distributed hands for showdown at the end
             id = int(id.strip())
             try:
                 member = ctx.guild.get_member(id)
@@ -313,7 +313,7 @@ class poker(commands.Cog):
     @commands.command()
     async def stop(self, ctx):
         user_id = str(ctx.author.id)
-        if user_id == RECIEVER_ID:
+        if user_id == str(RECIEVER_ID):
             await ctx.send("bot is shutting down")
             print('bot shut down')
             await self.bot.close()   
