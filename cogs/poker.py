@@ -2,7 +2,6 @@ import discord
 import json
 import random
 import os
-from dotenv import load_dotenv
 from discord.ext import commands
 
 RECIEVER_ID = (int) (os.getenv("RECIEVER_ID"))
